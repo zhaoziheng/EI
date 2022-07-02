@@ -5,20 +5,21 @@ from utils.metric import cal_psnr, cal_mse
 def closure_ei(net, dataloader, physics, transform,
                     optimizer, criterion_mc, criterion_ei,
                     alpha, dtype, device, reportpsnr=False):
+    # run本函数 == 一轮epoch
     loss_mc_seq, loss_ei_seq, loss_seq, psnr_seq, mse_seq = [], [], [], [], []
     for i, x in enumerate(dataloader):
         x = x[0] if isinstance(x, list) else x
         if len(x.shape)==3:
-            x = x.unsqueeze(1)
-        x = x.type(dtype).to(device)# ground-truth signal x
+            x = x.unsqueeze(1)  # [bs, 1, h, w]
+        x = x.type(dtype).to(device) # ground-truth signal x, 维度为m
 
-        y0 = physics.A(x.type(dtype).to(device)) # generate measurement input y
-        x0 = physics.A_dagger(y0) # range input (A^+y)
+        y0 = physics.A(x.type(dtype).to(device)) # generate measurement input y, 维度为n
+        x0 = physics.A_dagger(y0) # range input (A^+y), 通过approximatte inverse把y变成维度m(假如A是已知的，那这一步等于Measurement Consistency，例如inpainting和k-space sample，否则这一步结果比MC差)
 
-        x1 = net(x0)
-        y1 = physics.A(x1)
+        x1 = net(x0)  # 重建结果
+        y1 = physics.A(x1)  # 对inpainting和k-space sample来说，这里y1应该肯定等于y0
 
-        # equivariant imaging: x2, x3
+        # equivariant imaging（开始加入transform）: x2, x3
         x2 = transform.apply(x1)
         x3 = net(physics.A_dagger(physics.A(x2)))
 

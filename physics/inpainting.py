@@ -3,6 +3,7 @@ import torch
 
 class Inpainting():
     def __init__(self, img_heigth=512, img_width=512, mode='random', mask_rate=0.3, resize=False, device='cuda:0'):
+        # 在initial时随生成一个mask，整个类的自始至终都只有一个mask
         mask_path = './physics/mask_random{}.pt'.format(mask_rate)
         if os.path.exists(mask_path):
             self.mask = torch.load(mask_path).to(device)
